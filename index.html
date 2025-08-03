@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infiteach - منصة تعليمية رقمية</title>
+    
+    <!-- TailwindCSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    
+    <!-- jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        .section {
+            display: none;
+        }
+        .section.active {
+            display: block;
+        }
+        .chat-window {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            width: 350px;
+            height: 450px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .chat-window.active {
+            display: flex;
+        }
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            border-top: 1px solid #eee;
+        }
+        .chat-input input {
+            flex-grow: 1;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 8px 15px;
+            margin-left: 10px;
+        }
+        .chat-bubble {
+            margin-bottom: 10px;
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 80%;
+        }
+        .user-message {
+            background-color: #f1f1f1;
+            align-self: flex-end;
+            margin-right: auto;
+        }
+        .bot-message {
+            background-color: #4F46E5;
+            color: white;
+            align-self: flex-start;
+            margin-left: auto;
+        }
+        .course-card {
+            transition: transform 0.3s ease;
+        }
+        .course-card:hover {
+            transform: translateY(-5px);
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translate(-50%, -20px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+        @keyframes fade-out {
+            from { opacity: 1; transform: translate(-50%, 0); }
+            to { opacity: 0; transform: translate(-50%, -20px); }
+        }
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out forwards;
+        }
+        .animate-fade-out {
+            animation: fade-out 0.3s ease-out forwards;
+        }
+        .loading-spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 3px solid white;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-md py-4 px-6 flex justify-between items-center">
+        <div class="flex items-center">
+            <h1 class="text-2xl font-bold text-indigo-700">Infiteach</h1>
+        </div>
+        <div id="nav-auth" class="flex space-x-4 space-x-reverse">
+            <button id="login-btn" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition">تسجيل الدخول</button>
+            <button id="signup-btn" class="bg-white text-indigo-600 border border-indigo-600 px-4 py-2 rounded-lg hover:bg-indigo-50 transition">إنشاء حساب</button>
+        </div>
+        <div id="nav-user" class="hidden flex items-center space-x-4 space-x-reverse">
+            <span id="user-name" class="text-gray-700"></span>
+            <button id="logout-btn" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Landing Page Section -->
+    <section id="landing-section" class="section active">
+        <div class="container mx-auto px-4 py-16">
+            <div class="text-center mb-16">
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-6">مرحباً بك في منصة <span class="text-indigo-600">Infiteach</span></h1>
+                <p class="text-xl text-gray-600 max-w-2xl mx-auto">منصة تعليمية رقمية مجانية توفر لك تجربة تعلم مميزة مع محتوى تفاعلي عالي الجودة</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+                <!-- Student Card -->
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center course-card">
+                    <div class="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-user-graduate text-indigo-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">تلميذ</h3>
+                    <p class="text-gray-600 mb-6">انضم إلى آلاف الطلاب وابدأ رحلتك التعليمية مع دورات متنوعة وتمارين تفاعلية</p>
+                    <button class="user-type-btn bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition" data-user-type="student">ابدأ التعلم</button>
+                </div>
+
+                <!-- Teacher Card -->
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center course-card">
+                    <div class="bg-green-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-chalkboard-teacher text-green-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">أستاذ</h3>
+                    <p class="text-gray-600 mb-6">أنشئ محتوى تعليمي متميز، أضف تمارين واختبارات، وتابع تقدم طلابك</p>
+                    <button class="user-type-btn bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition" data-user-type="teacher">ابدأ التدريس</button>
+                </div>
+
+                <!-- School Card -->
+                <div class="bg-white rounded-xl shadow-lg p-8 text-center course-card">
+                    <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i class="fas fa-school text-purple-600 text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">مدرسة</h3>
+                    <p class="text-gray-600 mb-6">إدارة مؤسستك التعليمية، متابعة أداء الطلاب والمعلمين، وعرض الإحصائيات</p>
+                    <button class="user-type-btn bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition" data-user-type="school">إدارة المؤسسة</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Login Section -->
+    <section id="login-section" class="section">
+        <div class="container mx-auto px-4 py-16">
+            <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">تسجيل الدخول</h2>
+                <form id="login-form">
+                    <div class="mb-6">
+                        <label for="login-email" class="block text-gray-700 mb-2">البريد الإلكتروني</label>
+                        <input type="email" id="login-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="login-password" class="block text-gray-700 mb-2">كلمة المرور</label>
+                        <input type="password" id="login-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="login-user-type" class="block text-gray-700 mb-2">نوع المستخدم</label>
+                        <select id="login-user-type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="student">تلميذ</option>
+                            <option value="teacher">أستاذ</option>
+                            <option value="school">مدرسة</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">دخول</button>
+                    <div class="mt-4 text-center">
+                        <p class="text-gray-600">ليس لديك حساب؟ <a href="#" id="go-to-signup" class="text-indigo-600 hover:underline">إنشاء حساب</a></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Signup Section -->
+    <section id="signup-section" class="section">
+        <div class="container mx-auto px-4 py-16">
+            <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-center text-gray-800 mb-8">إنشاء حساب جديد</h2>
+                <form id="signup-form">
+                    <div class="mb-6">
+                        <label for="signup-name" class="block text-gray-700 mb-2">الاسم الكامل</label>
+                        <input type="text" id="signup-name" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="signup-email" class="block text-gray-700 mb-2">البريد الإلكتروني</label>
+                        <input type="email" id="signup-email" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="signup-password" class="block text-gray-700 mb-2">كلمة المرور</label>
+                        <input type="password" id="signup-password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                    </div>
+                    <div class="mb-6">
+                        <label for="signup-user-type" class="block text-gray-700 mb-2">نوع المستخدم</label>
+                        <select id="signup-user-type" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            <option value="student">تلميذ</option>
+                            <option value="teacher">أستاذ</option>
+                            <option value="school">مدرسة</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">إنشاء حساب</button>
+                    <div class="mt-4 text-center">
+                        <p class="text-gray-600">لديك حساب بالفعل؟ <a href="#" id="go-to-login" class="text-indigo-600 hover:underline">تسجيل الدخول</a></p>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section id="dashboard-section" class="section">
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">لوحة التحكم</h2>
+                <div class="flex space-x-4 space-x-reverse">
+                    <button id="dashboard-home" class="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg hover:bg-indigo-200 transition">
+                        <i class="fas fa-home ml-2"></i> الرئيسية
+                    </button>
+                    <button id="dashboard-courses" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+                        <i class="fas fa-book ml-2"></i> الدورات
+                    </button>
+                    <button id="dashboard-profile" class="bg-white text-gray-700 border border-gray-300 px-4 py-2 rounded-lg hover:bg-gray-50 transition">
+                        <i class="fas fa-user ml-2"></i> الملف الشخصي
+                    </button>
+                </div>
+            </div>
+
+            <!-- Student Dashboard -->
+            <div id="student-dashboard" class="dashboard-content">
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">مرحباً <span id="student-name"></span>، تقدمك التعليمي</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-indigo-50 p-4 rounded-lg">
+                            <p class="text-gray-600">الدورات المكتملة</p>
+                            <p class="text-2xl font-bold text-indigo-600">3</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-gray-600">التمارين المحلولة</p>
+                            <p class="text-2xl font-bold text-green-600">24</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <p class="text-gray-600">الشهادات المكتسبة</p>
+                            <p class="text-2xl font-bold text-purple-600">2</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">دورات مقترحة لك</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Course Card 1 -->
+                        <div class="border border-gray-200 rounded-lg overflow-hidden course-card">
+                            <div class="h-40 bg-gray-200 flex items-center justify-center">
+                                <i class="fas fa-laptop-code text-4xl text-gray-500"></i>
+                            </div>
+                            <div class="p-4">
+                                <h4 class="font-bold text-lg mb-2">مقدمة في البرمجة</h4>
+                                <p class="text-gray-600 mb-4">تعلم أساسيات البرمجة باستخدام لغة Python</p>
+                                <button class="view-course-btn w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition" data-course-id="1">عرض الدورة</button>
+                            </div>
+                        </div>
+                        <!-- Course Card 2 -->
+                        <div class="border border-gray-200 rounded-lg overflow-hidden course-card">
+                            <div class="h-40 bg-gray-200 flex items-center justify-center">
+                                <i class="fas fa-language text-4xl text-gray-500"></i>
+                            </div>
+                            <div class="p-4">
+                                <h4 class="font-bold text-lg mb-2">اللغة الإنجليزية للمبتدئين</h4>
+                                <p class="text-gray-600 mb-4">تعلم أساسيات اللغة الإنجليزية خطوة بخطوة</p>
+                                <button class="view-course-btn w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition" data-course-id="2">عرض الدورة</button>
+                            </div>
+                        </div>
+                        <!-- Course Card 3 -->
+                        <div class="border border-gray-200 rounded-lg overflow-hidden course-card">
+                            <div class="h-40 bg-gray-200 flex items-center justify-center">
+                                <i class="fas fa-calculator text-4xl text-gray-500"></i>
+                            </div>
+                            <div class="p-4">
+                                <h4 class="font-bold text-lg mb-2">الرياضيات التطبيقية</h4>
+                                <p class="text-gray-600 mb-4">تطبيقات عملية في الرياضيات للمرحلة الثانوية</p>
+                                <button class="view-course-btn w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition" data-course-id="3">عرض الدورة</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Teacher Dashboard -->
+            <div id="teacher-dashboard" class="dashboard-content hidden">
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">مرحباً <span id="teacher-name"></span>، لوحة التحكم الخاصة بك</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-indigo-50 p-4 rounded-lg">
+                            <p class="text-gray-600">الدورات المنشورة</p>
+                            <p class="text-2xl font-bold text-indigo-600">5</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-gray-600">عدد الطلاب</p>
+                            <p class="text-2xl font-bold text-green-600">142</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <p class="text-gray-600">التمارين المنشورة</p>
+                            <p class="text-2xl font-bold text-purple-600">38</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">إنشاء محتوى جديد</h3>
+                        <form id="create-course-form">
+                            <div class="mb-4">
+                                <label for="course-title" class="block text-gray-700 mb-2">عنوان الدورة</label>
+                                <input type="text" id="course-title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="course-description" class="block text-gray-700 mb-2">وصف الدورة</label>
+                                <textarea id="course-description" rows="3" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <label for="course-video" class="block text-gray-700 mb-2">رابط الفيديو (YouTube)</label>
+                                <input type="url" id="course-video" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="course-pdf" class="block text-gray-700 mb-2">رابط ملف PDF</label>
+                                <input type="url" id="course-pdf" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                            </div>
+                            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">إنشاء الدورة</button>
+                        </form>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-4">إنشاء اختبار جديد</h3>
+                        <form id="create-quiz-form">
+                            <div class="mb-4">
+                                <label for="quiz-title" class="block text-gray-700 mb-2">عنوان الاختبار</label>
+                                <input type="text" id="quiz-title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                            </div>
+                            <div class="mb-4">
+                                <label for="quiz-question" class="block text-gray-700 mb-2">السؤال</label>
+                                <input type="text" id="quiz-question" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-gray-700 mb-2">الخيارات</label>
+                                <div class="space-y-2">
+                                    <input type="text" class="quiz-option w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="الخيار الأول" required>
+                                    <input type="text" class="quiz-option w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="الخيار الثاني" required>
+                                    <input type="text" class="quiz-option w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="الخيار الثالث" required>
+                                    <input type="text" class="quiz-option w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="الخيار الرابع" required>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="quiz-answer" class="block text-gray-700 mb-2">الإجابة الصحيحة</label>
+                                <select id="quiz-answer" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500" required>
+                                    <option value="0">الخيار الأول</option>
+                                    <option value="1">الخيار الثاني</option>
+                                    <option value="2">الخيار الثالث</option>
+                                    <option value="3">الخيار الرابع</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">إنشاء الاختبار</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- School Dashboard -->
+            <div id="school-dashboard" class="dashboard-content hidden">
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">مرحباً <span id="school-name"></span>، إحصائيات المؤسسة التعليمية</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-indigo-50 p-4 rounded-lg">
+                            <p class="text-gray-600">عدد الطلاب</p>
+                            <p class="text-2xl font-bold text-indigo-600">542</p>
+                        </div>
+                        <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-gray-600">عدد المعلمين</p>
+                            <p class="text-2xl font-bold text-green-600">28</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <p class="text-gray-600">الدورات النشطة</p>
+                            <p class="text-2xl font-bold text-purple-600">16</p>
+                        </div>
+                        <div class="bg-yellow-50 p-4 rounded-lg">
+                            <p class="text-gray-600">معدل الإنجاز</p>
+                            <p class="text-2xl font-bold text-yellow-600">78%</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4">إدارة المعلمين</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">المعلم</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الدورات</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الطلاب</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">الإجراءات</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-10 w-10">
+                                                <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                    <i class="fas fa-user text-indigo-600"></i>
+                                                </div>
+                                            </div>
+                                            <div class="mr-4">
+                                                <div class="text-sm font-medium text-gray-900">أحمد محمد</div>
+                                                <div class="text-sm text-gray-500">ahmed@example.com</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">5</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">124</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <a href="#" class="text-indigo-600 hover:text-indigo-900">عرض</a>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-6 py-4 whitespace-nowrap">
+                                        <div class="flex items-center">
+                                            <div class="flex-shrink-0 h-10 w-10">
+                                                <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                                                    <i class="fas fa-user text-indigo-600"></i>
+                                                </div>
+                                            </div>
+                                            <div class="mr-4">
+                                                <div class="text-sm font-medium text-gray-900">فاطمة علي</div>
+                                                <div class="text-sm text-gray-500">fatima@example.com</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">3</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">87</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                        <a href="#" class="text-indigo-600 hover:text-indigo-900">عرض</a>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Courses Section -->
+    <section id="courses-section" class="section">
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">الدورات التعليمية</h2>
+                <button id="back-to-dashboard" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                    <i class="fas fa-arrow-right ml-2"></i> العودة للوحة التحكم
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Course Card 1 -->
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden course-card">
+                    <div class="h-48 bg-gray-200 flex items-center justify-center">
+                        <i class="fas fa-laptop-code text-5xl text-gray-500"></i>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">مقدمة في البرمجة</h3>
+                        <p class="text-gray-600 mb-4">تعلم أساسيات البرمجة باستخدام لغة Python من الصفر حتى الاحتراف</p>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm text-gray-500"><i class="fas fa-clock ml-1"></i> 8 ساعات</span>
+                            <span class="text-sm text-gray-500"><i class="fas fa-signal ml-1"></i> متوسط</span>
+                        </div>
+                        <button class="view-course-btn w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition" data-course-id="1">عرض الدورة</button>
+                    </div>
+                </div>
+
+                <!-- Course Card 2 -->
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden course-card">
+                    <div class="h-48 bg-gray-200 flex items-center justify-center">
+                        <i class="fas fa-language text-5xl text-gray-500"></i>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">اللغة الإنجليزية للمبتدئين</h3>
+                        <p class="text-gray-600 mb-4">تعلم أساسيات اللغة الإنجليزية خطوة بخطوة مع تمارين عملية</p>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm text-gray-500"><i class="fas fa-clock ml-1"></i> 12 ساعة</span>
+                            <span class="text-sm text-gray-500"><i class="fas fa-signal ml-1"></i> مبتدئ</span>
+                        </div>
+                        <button class="view-course-btn w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition" data-course-id="2">عرض الدورة</button>
+                    </div>
+                </div>
+
+                <!-- Course Card 3 -->
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden course-card">
+                    <div class="h-48 bg-gray-200 flex items-center justify-center">
+                        <i class="fas fa-calculator text-5xl text-gray-500"></i>
+                    </div>
+                    <div class="p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">الرياضيات التطبيقية</h3>
+                        <p class="text-gray-600 mb-4">تطبيقات عملية في الرياضيات للمرحلة الثانوية مع أمثلة وحلول</p>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-sm text-gray-500"><i class="fas fa-clock ml-1"></i> 10 ساعات</span>
+                            <span class="text-sm text-gray-500"><i class="fas fa-signal ml-1"></i> متوسط</span>
+                        </div>
+                        <button class="view-course-btn w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition" data-course-id="3">عرض الدورة</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Course Detail Section -->
+    <section id="course-detail-section" class="section">
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex justify-between items-center mb-8">
+                <h2 id="course-detail-title" class="text-2xl font-bold text-gray-800">عنوان الدورة</h2>
+                <button id="back-to-courses" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                    <i class="fas fa-arrow-right ml-2"></i> العودة للدورات
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2">
+                        <div class="mb-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">فيديو الدورة</h3>
+                            <div class="aspect-w-16 aspect-h-9 bg-gray-200 rounded-lg overflow-hidden">
+                                <iframe id="course-video" class="w-full h-96" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">وصف الدورة</h3>
+                            <p id="course-description" class="text-gray-600">وصف الدورة هنا...</p>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">ملفات الدورة</h3>
+                            <div class="bg-gray-50 p-4 rounded-lg">
+                                <a id="course-pdf-link" href="#" target="_blank" class="flex items-center text-indigo-600 hover:text-indigo-800">
+                                    <i class="fas fa-file-pdf ml-2"></i>
+                                    <span>تحميل ملف PDF الخاص بالدورة</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <div class="bg-gray-50 p-6 rounded-lg mb-6">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">معلومات الدورة</h3>
+                            <div class="space-y-3">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">المدة:</span>
+                                    <span id="course-duration" class="font-medium">8 ساعات</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">المستوى:</span>
+                                    <span id="course-level" class="font-medium">متوسط</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">عدد الدروس:</span>
+                                    <span id="course-lessons" class="font-medium">12 درس</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">اللغة:</span>
+                                    <span class="font-medium">العربية</span>
+                                </div>
+                            </div>
+                            
+                            <button id="take-quiz-btn" class="w-full bg-indigo-600 text-white py-3 rounded-lg hover:bg-indigo-700 transition mt-6">
+                                <i class="fas fa-clipboard-check ml-2"></i> اجتياز الاختبار
+                            </button>
+                        </div>
+                        
+                        <div class="bg-gray-50 p-6 rounded-lg">
+                            <h3 class="text-xl font-bold text-gray-800 mb-4">المحاضر</h3>
+                            <div class="flex items-center">
+                                <div class="flex-shrink-0 h-12 w-12">
+                                    <div class="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                                        <i class="fas fa-user text-indigo-600"></i>
+                                    </div>
+                                </div>
+                                <div class="mr-4">
+                                    <div id="instructor-name" class="text-sm font-medium text-gray-900">أحمد محمد</div>
+                                    <div class="text-sm text-gray-500">محاضر في البرمجة</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quiz Section -->
+    <section id="quiz-section" class="section">
+        <div class="container mx-auto px-4 py-8">
+            <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 id="quiz-title" class="text-2xl font-bold text-gray-800">اختبار الدورة</h2>
+                    <button id="back-to-course" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-arrow-right ml-2"></i> العودة للدورة
+                    </button>
+                </div>
+                
+                <div id="quiz-container">
+                    <div class="mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-gray-600">السؤال <span id="current-question">1</span> من <span id="total-questions">5</span></span>
+                            <span class="text-gray-600">الدرجة: <span id="quiz-score">0</span></span>
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="quiz-progress" class="bg-indigo-600 h-2 rounded-full" style="width: 20%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-8">
+                        <h3 id="quiz-question" class="text-xl font-bold text-gray-800 mb-6">ما هي لغة البرمجة الأكثر شيوعاً في العالم؟</h3>
+                        <div class="space-y-3">
+                            <div class="quiz-option p-4 border border-gray-300 rounded-lg" data-option="0">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="quiz-answer" class="ml-2">
+                                    <span>Python</span>
+                                </label>
+                            </div>
+                            <div class="quiz-option p-4 border border-gray-300 rounded-lg" data-option="1">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="quiz-answer" class="ml-2">
+                                    <span>Java</span>
+                                </label>
+                            </div>
+                            <div class="quiz-option p-4 border border-gray-300 rounded-lg" data-option="2">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="quiz-answer" class="ml-2">
+                                    <span>C++</span>
+                                </label>
+                            </div>
+                            <div class="quiz-option p-4 border border-gray-300 rounded-lg" data-option="3">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="quiz-answer" class="ml-2">
+                                    <span>JavaScript</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between">
+                        <button id="prev-question-btn" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition disabled:opacity-50" disabled>
+                            <i class="fas fa-arrow-right ml-2"></i> السؤال السابق
+                        </button>
+                        <button id="next-question-btn" class="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition">
+                            السؤال التالي <i class="fas fa-arrow-left mr-2"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="quiz-result" class="hidden text-center py-8">
+                    <div class="mb-6">
+                        <i class="fas fa-trophy text-5xl text-yellow-500 mb-4"></i>
+                        <h3 class="text-2xl font-bold text-gray-800 mb-2">نتيجة الاختبار</h3>
+                        <p class="text-gray-600">لقد حصلت على <span id="final-score" class="font-bold text-indigo-600">0</span> من <span id="max-score" class="font-bold">5</span></p>
+                    </div>
+                    
+                    <div id="quiz-passed" class="mb-6">
+                        <p class="text-green-600 font-bold mb-4">تهانينا! لقد اجتزت الاختبار بنجاح</p>
+                        <button id="download-certificate-btn" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition">
+                            <i class="fas fa-certificate ml-2"></i> تحميل الشهادة
+                        </button>
+                    </div>
+                    
+                    <div id="quiz-failed" class="mb-6 hidden">
+                        <p class="text-red-600 font-bold mb-4">للأسف، لم تجتز الاختبار. حاول مرة أخرى</p>
+                        <button id="retry-quiz-btn" class="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 transition">
+                            <i class="fas fa-redo ml-2"></i> إعادة الاختبار
+                        </button>
+                    </div>
+                    
+                    <button id="back-to-course-from-result" class="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition">
+                        <i class="fas fa-arrow-right ml-2"></i> العودة للدورة
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Profile Section -->
+    <section id="profile-section" class="section">
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex justify-between items-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800">الملف الشخصي</h2>
+                <button id="back-to-dashboard-from-profile" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-300 transition">
+                    <i class="fas fa-arrow-right ml-2"></i> العودة للوحة التحكم
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-1">
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <div class="text-center mb-6">
+                            <div class="mx-auto h-24 w-24 rounded-full bg-indigo-100 flex items-center justify-center mb-4">
+                                <i class="fas fa-user text-indigo-600 text-3xl"></i>
+                            </div>
+                            <h3 id="profile-name" class="text-xl font-bold text-gray-800">اسم المستخدم</h3>
+                            <p id="profile-email" class="text-gray-600">user@example.com</p>
+                            <span id="profile-role" class="inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full mt-2">تلميذ</span>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center">
+                                <i class="fas fa-calendar-alt text-gray-500 ml-3"></i>
+                                <span class="text-gray-600">انضم في: <span id="profile-join-date">01/01/2023</span></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-map-marker-alt text-gray-500 ml-3"></i>
+                                <span class="text-gray-600">الموقع: <span id="profile-location">الرياض، السعودية</span></span>
+                            </div>
+                            <div class="flex items-center">
+                                <i class="fas fa-book text-gray-500 ml-3"></i>
+                                <span class="text-gray-600">الدورات: <span id="profile-courses">3</span></span>
+                            </div>
+                        </div>
+                        
+                        <button id="edit-profile-btn" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition mt-6">
+                            <i class="fas fa-edit ml-2"></i> تعديل الملف الشخصي
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                        <h3 class="text-xl font-bold text-gray-800 mb-6">إنجازاتي</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-indigo-50 p-4 rounded-lg">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-certificate text-indigo-600 text-2xl ml-3"></i>
+                                    <h4 class="font-bold text-gray-800">الشهادات</h4>
+                                </div>
+                                <p class="text-3xl font-bold text-indigo-600">2</p>
+                                <p class="text-gray-600 text-sm">شهادات معتمدة</p>
+                            </div>
+                            <div class="bg-green-50 p-4 rounded-lg">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-check-circle text-green-600 text-2xl ml-3"></i>
+                                    <h4 class="font-bold text-gray-800">الدورات المكتملة</h4>
+                                </div>
+                                <p class="text-3xl font-bold text-green-600">3</p>
+                                <p class="text-gray-600 text-sm">دورات بنجاح</p>
+                            </div>
+                            <div class="bg-purple-50 p-4 rounded-lg">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-tasks text-purple-600 text-2xl ml-3"></i>
+                                    <h4 class="font-bold text-gray-800">التمارين المحلولة</h4>
+                                </div>
+                                <p class="text-3xl font-bold text-purple-600">24</p>
+                                <p class="text-gray-600 text-sm">تمرين بنجاح</p>
+                            </div>
+                            <div class="bg-yellow-50 p-4 rounded-lg">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-star text-yellow-600 text-2xl ml-3"></i>
+                                    <h4 class="font-bold text-gray-800">النقاط</h4>
+                                </div>
+                                <p class="text-3xl font-bold text-yellow-600">480</p>
+                                <p class="text-gray-600 text-sm">نقطة مكتسبة</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-lg p-6">
+                        <h3 class="text-xl font-bold text-gray-800 mb-6">شهاداتي</h3>
+                        <div class="space-y-4">
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="bg-indigo-100 w-12 h-12 rounded-lg flex items-center justify-center ml-4">
+                                        <i class="fas fa-certificate text-indigo-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">شهادة إتمام دورة مقدمة في البرمجة</h4>
+                                        <p class="text-gray-600 text-sm">صادرة في 15/06/2023</p>
+                                    </div>
+                                </div>
+                                <button class="text-indigo-600 hover:text-indigo-800">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                            <div class="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+                                <div class="flex items-center">
+                                    <div class="bg-indigo-100 w-12 h-12 rounded-lg flex items-center justify-center ml-4">
+                                        <i class="fas fa-certificate text-indigo-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-bold text-gray-800">شهادة إتمام دورة اللغة الإنجليزية للمبتدئين</h4>
+                                        <p class="text-gray-600 text-sm">صادرة في 22/07/2023</p>
+                                    </div>
+                                </div>
+                                <button class="text-indigo-600 hover:text-indigo-800">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Chatbot Window -->
+    <div id="chatbot-window" class="chat-window">
+        <div class="bg-indigo-600 text-white p-4 rounded-t-xl flex justify-between items-center">
+            <div class="flex items-center">
+                <div class="w-8 h-8 rounded-full bg-white bg-opacity-20 flex items-center justify-center ml-2">
+                    <i class="fas fa-robot text-sm"></i>
+                </div>
+                <h3 class="font-bold">نور - المساعد الذكي</h3>
+            </div>
+            <button id="close-chatbot" class="text-white hover:text-gray-200">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="chat-messages" class="chat-messages">
+            <div class="chat-bubble bot-message">
+                مرحباً! أنا نور، المساعد الذكي لمنصة Infiteach. كيف يمكنني مساعدتك اليوم؟
+            </div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="chat-input-field" placeholder="اكتب سؤالك هنا..." class="focus:outline-none">
+            <button id="send-chat-btn" class="bg-indigo-600 text-white w-10 h-10 rounded-full flex items-center justify-center hover:bg-indigo-700 transition">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Chatbot Button -->
+    <button id="open-chatbot" class="fixed bottom-6 left-6 bg-indigo-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-lg hover:bg-indigo-700 transition z-50">
+        <i class="fas fa-comments text-xl"></i>
+    </button>
+
+    <script>
+        // Initialize Firebase with your configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDaRhX-P5QsZ5ZiVfAwHGnZCbgbKXQ_GNg",
+            authDomain: "infiteach-cfc92.firebaseapp.com",
+            projectId: "infiteach-cfc92",
+            storageBucket: "infiteach-cfc92.firebasestorage.app",
+            messagingSenderId: "794073472020",
+            appId: "1:794073472020:web:38fd8f3ae278c35041db01",
+            measurementId: "G-2ZXSV5MZPB"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        
+        // Global variables
+        let currentUser = null;
+        let currentUserType = null;
+        let currentCourse = null;
+        let quizQuestions = [];
+        let currentQuestionIndex = 0;
+        let quizScore = 0;
+        let userAnswers = [];
+        
+        // Course data
+        const courses = {
+            1: {
+                title: "مقدمة في البرمجة",
+                description: "تعلم أساسيات البرمجة باستخدام لغة Python من الصفر حتى الاحتراف. سنتناول في هذه الدورة المفاهيم الأساسية للبرمجة، المتغيرات، الشروط، الحلقات التكرارية، الدوال، وهياكل البيانات.",
+                video: "https://www.youtube.com/embed/rfscVS0vtbw",
+                pdf: "https://example.com/python-intro.pdf",
+                duration: "8 ساعات",
+                level: "متوسط",
+                lessons: "12 درس",
+                instructor: "أحمد محمد"
+            },
+            2: {
+                title: "اللغة الإنجليزية للمبتدئين",
+                description: "تعلم أساسيات اللغة الإنجليزية خطوة بخطوة مع تمارين عملية. تغطي هذه الدورة القواعد الأساسية، المفردات الشائعة، المحادثات اليومية.",
+                video: "https://www.youtube.com/embed/0-s6aO6a0Y4",
+                pdf: "https://example.com/english-basics.pdf",
+                duration: "12 ساعة",
+                level: "مبتدئ",
+                lessons: "20 درس",
+                instructor: "سارة أحمد"
+            },
+            3: {
+                title: "الرياضيات التطبيقية",
+                description: "تطبيقات عملية في الرياضيات للمرحلة الثانوية مع أمثلة وحلول. تشمل هذه الدورة الجبر، الهندسة، الإحصاء، والاحتمالات.",
+                video: "https://www.youtube.com/embed/0-s6aO6a0Y4",
+                pdf: "https://example.com/applied-math.pdf",
+                duration: "10 ساعات",
+                level: "متوسط",
+                lessons: "15 درس",
+                instructor: "محمد خالد"
+            }
+        };
+        
+        // Quiz questions for each course
+        const quizData = {
+            1: [
+                {
+                    question: "ما هي لغة البرمجة الأكثر شيوعاً في العالم؟",
+                    options: ["Python", "Java", "C++", "JavaScript"],
+                    correctAnswer: 1
+                },
+                {
+                    question: "ما هو استخدام الدالة print() في لغة Python؟",
+                    options: ["طباعة النصوص على الشاشة", "قراءة المدخلات من المستخدم", "إنشاء متغير جديد", "إنهاء البرنامج"],
+                    correctAnswer: 0
+                },
+                {
+                    question: "ما هو نوع البيانات الصحيحة للقيمة 3.14 في Python؟",
+                    options: ["int", "str", "float", "bool"],
+                    correctAnswer: 2
+                },
+                {
+                    question: "ماذا يفيد العامل == في لغة Python؟",
+                    options: ["تعيين قيمة لمتغير", "مقارنة قيمتين", "جمع قيمتين", "طرح قيمتين"],
+                    correctAnswer: 1
+                },
+                {
+                    question: "ما هي بنية البيانات المستخدمة لتخزين مجموعة من العناصر المرتبة في Python؟",
+                    options: ["Dictionary", "Set", "Tuple", "List"],
+                    correctAnswer: 3
+                }
+            ],
+            2: [
+                {
+                    question: "ما هو الترجمة الصحيحة لكلمة 'Hello'؟",
+                    options: ["وداعاً", "مرحباً", "شكراً", "معذرة"],
+                    correctAnswer: 1
+                },
+                {
+                    question: "ما هو الفعل الصحيح لملء الفراغ: I ___ a student.",
+                    options: ["am", "is", "are", "be"],
+                    correctAnswer: 0
+                },
+                {
+                    question: "ما هو جمع كلمة 'Book'؟",
+                    options: ["Bookes", "Books", "Bookies", "Book"],
+                    correctAnswer: 1
+                },
+                {
+                    question: "ما هو نفي الجملة 'She is happy'؟",
+                    options: ["She not is happy", "She is not happy", "She doesn't happy", "She isn't happy"],
+                    correctAnswer: 3
+                },
+                {
+                    question: "ما هو الماضي من الفعل 'Go'؟",
+                    options: ["Goed", "Went", "Gone", "Going"],
+                    correctAnswer: 1
+                }
+            ],
+            3: [
+                {
+                    question: "ما هي قيمة π (باي) التقريبية؟",
+                    options: ["3.14", "2.71", "1.41", "1.73"],
+                    correctAnswer: 0
+                },
+                {
+                    question: "ما هي مساحة الدائرة التي نصف قطرها 5؟",
+                    options: ["25π", "10π", "5π", "15π"],
+                    correctAnswer: 0
+                },
+                {
+                    question: "ما هي الزاوية القائمة؟",
+                    options: ["45 درجة", "60 درجة", "90 درجة", "180 درجة"],
+                    correctAnswer: 2
+                },
+                {
+                    question: "ما هو متوسط الأعداد 5، 10، 15؟",
+                    options: ["5", "10", "15", "20"],
+                    correctAnswer: 1
+                },
+                {
+                    question: "ما هو محيط المربع الذي طول ضلعه 4 سم؟",
+                    options: ["8 سم", "12 سم", "16 سم", "20 سم"],
+                    correctAnswer: 2
+                }
+            ]
+        };
+        
+        // DOM elements
+        const sections = document.querySelectorAll('.section');
+        const landingSection = document.getElementById('landing-section');
+        const loginSection = document.getElementById('login-section');
+        const signupSection = document.getElementById('signup-section');
+        const dashboardSection = document.getElementById('dashboard-section');
+        const coursesSection = document.getElementById('courses-section');
+        const courseDetailSection = document.getElementById('course-detail-section');
+        const quizSection = document.getElementById('quiz-section');
+        const profileSection = document.getElementById('profile-section');
+        
+        const navAuth = document.getElementById('nav-auth');
+        const navUser = document.getElementById('nav-user');
+        const userName = document.getElementById('user-name');
+        
+        const loginBtn = document.getElementById('login-btn');
+        const signupBtn = document.getElementById('signup-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        
+        const goToSignup = document.getElementById('go-to-signup');
+        const goToLogin = document.getElementById('go-to-login');
+        
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        
+        const userTypeBtns = document.querySelectorAll('.user-type-btn');
+        
+        const dashboardHome = document.getElementById('dashboard-home');
+        const dashboardCourses = document.getElementById('dashboard-courses');
+        const dashboardProfile = document.getElementById('dashboard-profile');
+        
+        const backToDashboard = document.getElementById('back-to-dashboard');
+        const backToCourses = document.getElementById('back-to-courses');
+        const backToCourse = document.getElementById('back-to-course');
+        const backToCourseFromResult = document.getElementById('back-to-course-from-result');
+        const backToDashboardFromProfile = document.getElementById('back-to-dashboard-from-profile');
+        
+        const viewCourseBtns = document.querySelectorAll('.view-course-btn');
+        const takeQuizBtn = document.getElementById('take-quiz-btn');
+        
+        const studentDashboard = document.getElementById('student-dashboard');
+        const teacherDashboard = document.getElementById('teacher-dashboard');
+        const schoolDashboard = document.getElementById('school-dashboard');
+        
+        const studentName = document.getElementById('student-name');
+        const teacherName = document.getElementById('teacher-name');
+        const schoolName = document.getElementById('school-name');
+        
+        const createCourseForm = document.getElementById('create-course-form');
+        const createQuizForm = document.getElementById('create-quiz-form');
+        
+        const quizContainer = document.getElementById('quiz-container');
+        const quizResult = document.getElementById('quiz-result');
+        const currentQuestion = document.getElementById('current-question');
+        const totalQuestions = document.getElementById('total-questions');
+        const quizScoreElement = document.getElementById('quiz-score');
+        const quizProgress = document.getElementById('quiz-progress');
+        const quizQuestion = document.getElementById('quiz-question');
+        const quizOptions = document.querySelectorAll('.quiz-option');
+        const prevQuestionBtn = document.getElementById('prev-question-btn');
+        const nextQuestionBtn = document.getElementById('next-question-btn');
+        const finalScore = document.getElementById('final-score');
+        const maxScore = document.getElementById('max-score');
+        const quizPassed = document.getElementById('quiz-passed');
+        const quizFailed = document.getElementById('quiz-failed');
+        const downloadCertificateBtn = document.getElementById('download-certificate-btn');
+        const retryQuizBtn = document.getElementById('retry-quiz-btn');
+        
+        const profileName = document.getElementById('profile-name');
+        const profileEmail = document.getElementById('profile-email');
+        const profileRole = document.getElementById('profile-role');
+        const profileJoinDate = document.getElementById('profile-join-date');
+        const profileLocation = document.getElementById('profile-location');
+        const profileCourses = document.getElementById('profile-courses');
+        
+        const openChatbot = document.getElementById('open-chatbot');
+        const closeChatbot = document.getElementById('close-chatbot');
+        const chatbotWindow = document.getElementById('chatbot-window');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInputField = document.getElementById('chat-input-field');
+        const sendChatBtn = document.getElementById('send-chat-btn');
+        
+        // Show section function
+        function showSection(sectionToShow) {
+            sections.forEach(section => {
+                section.classList.remove('active');
+            });
+            sectionToShow.classList.add('active');
+        }
+        
+        // Update UI based on auth state
+        function updateUI(user) {
+            if (user) {
+                currentUser = user;
+                navAuth.classList.add('hidden');
+                navUser.classList.remove('hidden');
+                userName.textContent = user.displayName || user.email;
+                
+                // Get user type from localStorage
+                currentUserType = localStorage.getItem('userType') || 'student';
+                
+                // Update dashboard based on user type
+                updateDashboard();
+                
+                // Show dashboard section
+                showSection(dashboardSection);
+            } else {
+                currentUser = null;
+                currentUserType = null;
+                navAuth.classList.remove('hidden');
+                navUser.classList.add('hidden');
+                showSection(landingSection);
+            }
+        }
+        
+        // Update dashboard based on user type
+        function updateDashboard() {
+            // Hide all dashboards
+            studentDashboard.classList.add('hidden');
+            teacherDashboard.classList.add('hidden');
+            schoolDashboard.classList.add('hidden');
+            
+            // Show the appropriate dashboard
+            if (currentUserType === 'student') {
+                studentDashboard.classList.remove('hidden');
+                studentName.textContent = currentUser.displayName || 'طالب';
+            } else if (currentUserType === 'teacher') {
+                teacherDashboard.classList.remove('hidden');
+                teacherName.textContent = currentUser.displayName || 'أستاذ';
+            } else if (currentUserType === 'school') {
+                schoolDashboard.classList.remove('hidden');
+                schoolName.textContent = currentUser.displayName || 'مؤسسة';
+            }
+            
+            // Update profile section
+            updateProfile();
+        }
+        
+        // Update profile section
+        function updateProfile() {
+            profileName.textContent = currentUser.displayName || 'اسم المستخدم';
+            profileEmail.textContent = currentUser.email;
+            
+            if (currentUserType === 'student') {
+                profileRole.textContent = 'تلميذ';
+                profileRole.className = 'inline-block bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full mt-2';
+            } else if (currentUserType === 'teacher') {
+                profileRole.textContent = 'أستاذ';
+                profileRole.className = 'inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mt-2';
+            } else if (currentUserType === 'school') {
+                profileRole.textContent = 'مدرسة';
+                profileRole.className = 'inline-block bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full mt-2';
+            }
+            
+            // Set join date to current date if not set
+            const joinDate = localStorage.getItem('joinDate') || new Date().toLocaleDateString('ar-SA');
+            profileJoinDate.textContent = joinDate;
+            
+            // Set location if not set
+            const location = localStorage.getItem('location') || 'الرياض، السعودية';
+            profileLocation.textContent = location;
+            
+            // Set courses count
+            const coursesCount = localStorage.getItem('coursesCount') || '3';
+            profileCourses.textContent = coursesCount;
+        }
+        
+        // Auth state observer
+        auth.onAuthStateChanged(user => {
+            updateUI(user);
+        });
+        
+        // Event listeners
+        loginBtn.addEventListener('click', () => {
+            showSection(loginSection);
+        });
+        
+        signupBtn.addEventListener('click', () => {
+            showSection(signupSection);
+        });
+        
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut();
+        });
+        
+        goToSignup.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection(signupSection);
+        });
+        
+        goToLogin.addEventListener('click', (e) => {
+            e.preventDefault();
+            showSection(loginSection);
+        });
+        
+        // Login form submission
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            const userType = document.getElementById('login-user-type').value;
+            
+            try {
+                // Show loading state
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = 'جاري تسجيل الدخول... <span class="loading-spinner"></span>';
+                submitBtn.disabled = true;
+                
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                
+                // Save user type to localStorage
+                localStorage.setItem('userType', userType);
+                currentUserType = userType;
+                
+                // Save user data to Google Sheets (simulated)
+                saveUserDataToSheets(userCredential.user, userType);
+                
+                // Show success message
+                showNotification('تم تسجيل الدخول بنجاح', 'success');
+                
+                // Reset button
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            } catch (error) {
+                console.error('Login error:', error);
+                
+                // Reset button
+                const submitBtn = loginForm.querySelector('button[type="submit"]');
+                submitBtn.innerHTML = 'دخول';
+                submitBtn.disabled = false;
+                
+                // Show error message
+                let errorMessage = 'حدث خطأ في تسجيل الدخول';
+                if (error.code === 'auth/user-not-found') {
+                    errorMessage = 'المستخدم غير موجود';
+                } else if (error.code === 'auth/wrong-password') {
+                    errorMessage = 'كلمة المرور خاطئة';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'البريد الإلكتروني غير صالح';
+                }
+                
+                showNotification(errorMessage, 'error');
+            }
+        });
+        
+        // Signup form submission
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const userType = document.getElementById('signup-user-type').value;
+            
+            try {
+                // Show loading state
+                const submitBtn = signupForm.querySelector('button[type="submit"]');
+                const originalText = submitBtn.innerHTML;
+                submitBtn.innerHTML = 'جاري إنشاء الحساب... <span class="loading-spinner"></span>';
+                submitBtn.disabled = true;
+                
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                
+                // Update user profile
+                await userCredential.user.updateProfile({
+                    displayName: name
+                });
+                
+                // Save user type to localStorage
+                localStorage.setItem('userType', userType);
+                localStorage.setItem('joinDate', new Date().toLocaleDateString('ar-SA'));
+                currentUserType = userType;
+                
+                // Save user data to Google Sheets (simulated)
+                saveUserDataToSheets(userCredential.user, userType);
+                
+                // Show success message
+                showNotification('تم إنشاء الحساب بنجاح', 'success');
+                
+                // Reset button
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            } catch (error) {
+                console.error('Signup error:', error);
+                
+                // Reset button
+                const submitBtn = signupForm.querySelector('button[type="submit"]');
+                submitBtn.innerHTML = 'إنشاء حساب';
+                submitBtn.disabled = false;
+                
+                // Show error message
+                let errorMessage = 'حدث خطأ في إنشاء الحساب';
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = 'البريد الإلكتروني مستخدم بالفعل';
+                } else if (error.code === 'auth/invalid-email') {
+                    errorMessage = 'البريد الإلكتروني غير صالح';
+                } else if (error.code === 'auth/weak-password') {
+                    errorMessage = 'كلمة المرور ضعيفة جداً';
+                }
+                
+                showNotification(errorMessage, 'error');
+            }
+        });
+        
+        // User type buttons
+        userTypeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const userType = btn.getAttribute('data-user-type');
+                document.getElementById('signup-user-type').value = userType;
+                showSection(signupSection);
+            });
+        });
+        
+        // Dashboard navigation
+        dashboardHome.addEventListener('click', () => {
+            showSection(dashboardSection);
+        });
+        
+        dashboardCourses.addEventListener('click', () => {
+            showSection(coursesSection);
+        });
+        
+        dashboardProfile.addEventListener('click', () => {
+            showSection(profileSection);
+        });
+        
+        // Back buttons
+        backToDashboard.addEventListener('click', () => {
+            showSection(dashboardSection);
+        });
+        
+        backToCourses.addEventListener('click', () => {
+            showSection(coursesSection);
+        });
+        
+        backToCourse.addEventListener('click', () => {
+            showSection(courseDetailSection);
+        });
+        
+        backToCourseFromResult.addEventListener('click', () => {
+            showSection(courseDetailSection);
+        });
+        
+        backToDashboardFromProfile.addEventListener('click', () => {
+            showSection(dashboardSection);
+        });
+        
+        // View course buttons
+        viewCourseBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const courseId = btn.getAttribute('data-course-id');
+                showCourseDetail(courseId);
+            });
+        });
+        
+        // Take quiz button
+        takeQuizBtn.addEventListener('click', () => {
+            if (currentCourse) {
+                startQuiz(currentCourse);
+            }
+        });
+        
+        // Create course form
+        createCourseForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('course-title').value;
+            const description = document.getElementById('course-description').value;
+            const video = document.getElementById('course-video').value;
+            const pdf = document.getElementById('course-pdf').value;
+            
+            // In a real app, you would save this to the database
+            showNotification('تم إنشاء الدورة بنجاح', 'success');
+            createCourseForm.reset();
+        });
+        
+        // Create quiz form
+        createQuizForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const title = document.getElementById('quiz-title').value;
+            const question = document.getElementById('quiz-question').value;
+            const options = [];
+            const optionInputs = document.querySelectorAll('.quiz-option');
+            
+            optionInputs.forEach(input => {
+                options.push(input.value);
+            });
+            
+            const correctAnswer = parseInt(document.getElementById('quiz-answer').value);
+            
+            // In a real app, you would save this to the database
+            showNotification('تم إنشاء الاختبار بنجاح', 'success');
+            createQuizForm.reset();
+        });
+        
+        // Quiz navigation
+        prevQuestionBtn.addEventListener('click', () => {
+            if (currentQuestionIndex > 0) {
+                currentQuestionIndex--;
+                showQuestion();
+            }
+        });
+        
+        nextQuestionBtn.addEventListener('click', () => {
+            const selectedOption = document.querySelector('input[name="quiz-answer"]:checked');
+            
+            if (selectedOption) {
+                // Save user answer
+                userAnswers[currentQuestionIndex] = parseInt(selectedOption.value);
+                
+                // Check if answer is correct
+                if (parseInt(selectedOption.value) === quizQuestions[currentQuestionIndex].correctAnswer) {
+                    quizScore++;
+                }
+                
+                if (currentQuestionIndex < quizQuestions.length - 1) {
+                    currentQuestionIndex++;
+                    showQuestion();
+                } else {
+                    // Show quiz result
+                    showQuizResult();
+                }
+            } else {
+                showNotification('الرجاء اختيار إجابة', 'warning');
+            }
+        });
+        
+        // Quiz option selection
+        quizOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                const optionIndex = parseInt(option.getAttribute('data-option'));
+                const radioInput = option.querySelector('input[type="radio"]');
+                radioInput.checked = true;
+                
+                // Update UI
+                quizOptions.forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                option.classList.add('selected');
+            });
+        });
+        
+        // Download certificate button
+        downloadCertificateBtn.addEventListener('click', () => {
+            generateCertificate();
+        });
+        
+        // Retry quiz button
+        retryQuizBtn.addEventListener('click', () => {
+            startQuiz(currentCourse);
+        });
+        
+        // Chatbot
+        openChatbot.addEventListener('click', () => {
+            chatbotWindow.classList.add('active');
+        });
+        
+        closeChatbot.addEventListener('click', () => {
+            chatbotWindow.classList.remove('active');
+        });
+        
+        sendChatBtn.addEventListener('click', sendChatMessage);
+        
+        chatInputField.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendChatMessage();
+            }
+        });
+        
+        // Functions
+        function showCourseDetail(courseId) {
+            currentCourse = courseId;
+            const course = courses[courseId];
+            
+            if (course) {
+                document.getElementById('course-detail-title').textContent = course.title;
+                document.getElementById('course-video').src = course.video;
+                document.getElementById('course-description').textContent = course.description;
+                document.getElementById('course-pdf-link').href = course.pdf;
+                document.getElementById('course-duration').textContent = course.duration;
+                document.getElementById('course-level').textContent = course.level;
+                document.getElementById('course-lessons').textContent = course.lessons;
+                document.getElementById('instructor-name').textContent = course.instructor;
+                
+                showSection(courseDetailSection);
+            }
+        }
+        
+        function startQuiz(courseId) {
+            currentCourse = courseId;
+            quizQuestions = quizData[courseId] || [];
+            currentQuestionIndex = 0;
+            quizScore = 0;
+            userAnswers = [];
+            
+            if (quizQuestions.length > 0) {
+                document.getElementById('quiz-title').textContent = `اختبار دورة ${courses[courseId].title}`;
+                totalQuestions.textContent = quizQuestions.length;
+                
+                // Reset quiz UI
+                quizContainer.classList.remove('hidden');
+                quizResult.classList.add('hidden');
+                
+                showQuestion();
+                showSection(quizSection);
+            } else {
+                showNotification('لا يوجد اختبار متاح لهذه الدورة', 'warning');
+            }
+        }
+        
+        function showQuestion() {
+            const question = quizQuestions[currentQuestionIndex];
+            
+            currentQuestion.textContent = currentQuestionIndex + 1;
+            quizScoreElement.textContent = quizScore;
+            quizProgress.style.width = `${((currentQuestionIndex + 1) / quizQuestions.length) * 100}%`;
+            quizQuestion.textContent = question.question;
+            
+            // Update options
+            const optionInputs = document.querySelectorAll('.quiz-option input');
+            const optionLabels = document.querySelectorAll('.quiz-option span');
+            
+            question.options.forEach((option, index) => {
+                optionInputs[index].value = index;
+                optionLabels[index].textContent = option;
+                optionInputs[index].checked = false;
+            });
+            
+            // Update selected option if user already answered
+            if (userAnswers[currentQuestionIndex] !== undefined) {
+                optionInputs[userAnswers[currentQuestionIndex]].checked = true;
+                quizOptions[userAnswers[currentQuestionIndex]].classList.add('selected');
+            } else {
+                quizOptions.forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+            }
+            
+            // Update navigation buttons
+            prevQuestionBtn.disabled = currentQuestionIndex === 0;
+            
+            if (currentQuestionIndex === quizQuestions.length - 1) {
+                nextQuestionBtn.textContent = 'إنهاء الاختبار';
+            } else {
+                nextQuestionBtn.innerHTML = 'السؤال التالي <i class="fas fa-arrow-left mr-2"></i>';
+            }
+        }
+        
+        function showQuizResult() {
+            quizContainer.classList.add('hidden');
+            quizResult.classList.remove('hidden');
+            
+            finalScore.textContent = quizScore;
+            maxScore.textContent = quizQuestions.length;
+            
+            const passingScore = Math.ceil(quizQuestions.length * 0.6); // 60% to pass
+            
+            if (quizScore >= passingScore) {
+                quizPassed.classList.remove('hidden');
+                quizFailed.classList.add('hidden');
+                
+                // Save quiz result to Google Sheets (simulated)
+                saveQuizResultToSheets(currentCourse, quizScore, quizQuestions.length);
+            } else {
+                quizPassed.classList.add('hidden');
+                quizFailed.classList.remove('hidden');
+            }
+        }
+        
+        function generateCertificate() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Certificate content
+            doc.setFontSize(24);
+            doc.text('شهادة إتمام دورة', 105, 40, { align: 'center' });
+            
+            doc.setFontSize(20);
+            doc.text(courses[currentCourse].title, 105, 60, { align: 'center' });
+            
+            doc.setFontSize(16);
+            doc.text(`تمنح هذه الشهادة إلى: ${currentUser.displayName || 'الطالب'}`, 105, 90, { align: 'center' });
+            
+            doc.setFontSize(14);
+            doc.text('لإتمامه بنجاح دورة ' + courses[currentCourse].title + ' في منصة Infiteach', 105, 110, { align: 'center' });
+            
+            // Date
+            const date = new Date().toLocaleDateString('ar-SA');
+            doc.text(`التاريخ: ${date}`, 105, 130, { align: 'center' });
+            
+            // Score
+            const percentage = Math.round((quizScore / quizQuestions.length) * 100);
+            doc.text(`الدرجة: ${percentage}%`, 105, 150, { align: 'center' });
+            
+            // Signature lines
+            doc.line(50, 180, 90, 180);
+            doc.text('مدير المنصة', 70, 190, { align: 'center' });
+            
+            doc.line(120, 180, 160, 180);
+            doc.text('المحاضر', 140, 190, { align: 'center' });
+            
+            // Save the PDF
+            doc.save(`شهادة_${courses[currentCourse].title}_${currentUser.displayName || 'الطالب'}.pdf`);
+            
+            showNotification('تم تحميل الشهادة بنجاح', 'success');
+        }
+        
+        function sendChatMessage() {
+            const message = chatInputField.value.trim();
+            
+            if (message) {
+                // Add user message to chat
+                addChatMessage(message, 'user');
+                
+                // Clear input
+                chatInputField.value = '';
+                
+                // Send to ChatGPT API (simulated)
+                simulateChatGPTResponse(message);
+            }
+        }
+        
+        function addChatMessage(message, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-bubble ${sender}-message`;
+            messageDiv.textContent = message;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function simulateChatGPTResponse(message) {
+            // Show typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'chat-bubble bot-message';
+            typingDiv.textContent = 'يكتب نور...';
+            chatMessages.appendChild(typingDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Simulate API call delay
+            setTimeout(() => {
+                // Remove typing indicator
+                chatMessages.removeChild(typingDiv);
+                
+                // Generate response based on message and user type
+                let response = '';
+                
+                if (message.includes('مرحبا') || message.includes('اهلا')) {
+                    response = 'مرحباً بك! كيف يمكنني مساعدتك اليوم؟';
+                } else if (message.includes('دورة') || message.includes('كورس')) {
+                    if (currentUserType === 'student') {
+                        response = 'يمكنك استعراض جميع الدورات المتاحة من قسم الدورات في لوحة التحكم. هل تبحث عن دورة في مجال معين؟';
+                    } else if (currentUserType === 'teacher') {
+                        response = 'يمكنك إنشاء دورات جديدة من قسم إنشاء محتوى في لوحة التحكم. هل تحتاج إلى مساعدة في إنشاء دورة؟';
+                    } else {
+                        response = 'يمكنك إدارة جميع الدورات في مؤسستك من لوحة التحكم. هل تريد معرفة إحصائيات الدورات؟';
+                    }
+                } else if (message.includes('اختبار') || message.includes('quiz')) {
+                    response = 'يمكنك اجتياز اختبارات الدورات بعد مشاهدة جميع محتويات الدورة. ستحصل على شهادة عند اجتياز الاختبار بنجاح.';
+                } else if (message.includes('شهادة') || message.includes('certificate')) {
+                    response = 'تحصل على شهادة إتمام الدورة عند اجتياز الاختبار بنجاح بنسبة 60% على الأقل. يمكن تحميل الشهادة بصيغة PDF.';
+                } else {
+                    // Default response based on user type
+                    if (currentUserType === 'student') {
+                        response = 'شكراً لسؤالك. كطالب، يمكنك الاستفادة من جميع الدورات والموارد التعليمية المتاحة في المنصة. هل هناك موضوع معين تريد التعلم عنه؟';
+                    } else if (currentUserType === 'teacher') {
+                        response = 'شكراً لسؤالك. كأستاذ، يمكنك إنشاء وإدارة المحتوى التعليمي، متابعة تقدم الطلاب، وإنشاء الاختبارات. كيف يمكنني مساعدتك في تحسين تجربة التدريس؟';
+                    } else {
+                        response = 'شكراً لسؤالك. كمدير مؤسسة، يمكنك متابعة أداء الطلاب والمعلمين، وعرض الإحصائيات العامة للمؤسسة. هل تحتاج إلى مساعدة في تحليل البيانات؟';
+                    }
+                }
+                
+                // Add bot response to chat
+                addChatMessage(response, 'bot');
+            }, 1000);
+        }
+        
+        function saveUserDataToSheets(user, userType) {
+            // In a real app, you would use Google Apps Script to save data to Google Sheets
+            // This is a simulation
+            
+            const userData = {
+                name: user.displayName || '',
+                email: user.email,
+                userType: userType,
+                joinDate: new Date().toISOString()
+            };
+            
+            console.log('Saving user data to Google Sheets:', userData);
+            
+            // Simulate API call
+            setTimeout(() => {
+                console.log('User data saved to Google Sheets successfully');
+            }, 1000);
+        }
+        
+        function saveQuizResultToSheets(courseId, score, totalQuestions) {
+            // In a real app, you would use Google Apps Script to save data to Google Sheets
+            // This is a simulation
+            
+            const quizResult = {
+                userEmail: currentUser.email,
+                userName: currentUser.displayName || '',
+                courseId: courseId,
+                courseName: courses[courseId].title,
+                score: score,
+                totalQuestions: totalQuestions,
+                percentage: Math.round((score / totalQuestions) * 100),
+                date: new Date().toISOString()
+            };
+            
+            console.log('Saving quiz result to Google Sheets:', quizResult);
+            
+            // Simulate API call
+            setTimeout(() => {
+                console.log('Quiz result saved to Google Sheets successfully');
+            }, 1000);
+        }
+        
+        function showNotification(message, type) {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 flex items-center ${getNotificationClass(type)}`;
+            
+            // Add icon based on type
+            const icon = document.createElement('i');
+            icon.className = `ml-2 ${getNotificationIcon(type)}`;
+            notification.appendChild(icon);
+            
+            // Add message
+            const messageText = document.createTextNode(message);
+            notification.appendChild(messageText);
+            
+            // Add to DOM
+            document.body.appendChild(notification);
+            
+            // Animate in
+            setTimeout(() => {
+                notification.classList.add('animate-fade-in');
+            }, 10);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                notification.classList.add('animate-fade-out');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 3000);
+        }
+        
+        function getNotificationClass(type) {
+            switch (type) {
+                case 'success':
+                    return 'bg-green-500 text-white';
+                case 'error':
+                    return 'bg-red-500 text-white';
+                case 'warning':
+                    return 'bg-yellow-500 text-white';
+                default:
+                    return 'bg-blue-500 text-white';
+            }
+        }
+        
+        function getNotificationIcon(type) {
+            switch (type) {
+                case 'success':
+                    return 'fas fa-check-circle';
+                case 'error':
+                    return 'fas fa-exclamation-circle';
+                case 'warning':
+                    return 'fas fa-exclamation-triangle';
+                default:
+                    return 'fas fa-info-circle';
+            }
+        }
+    </script>
+</body>
+</html>
